@@ -496,7 +496,7 @@ data: [DONE]</pre>
 
     <details open>
       <summary>cURL — simple single-turn question</summary>
-      <pre>curl -X POST https://your-domain/chat \
+      <pre>curl -X POST https://mn-chat-bot-api.vercel.app/chat \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -519,7 +519,7 @@ data: [DONE]</pre>
 
     <details>
       <summary>cURL — system prompt + multi-turn conversation</summary>
-      <pre>curl -X POST https://your-domain/chat \
+      <pre>curl -X POST https://mn-chat-bot-api.vercel.app/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama-3.3-70b",
@@ -534,7 +534,7 @@ data: [DONE]</pre>
 
     <details>
       <summary>cURL — streaming response (SSE)</summary>
-      <pre>curl -X POST https://your-domain/chat \
+      <pre>curl -X POST https://mn-chat-bot-api.vercel.app/chat \
   -H "Content-Type: application/json" \
   --no-buffer \
   -d '{
@@ -598,7 +598,7 @@ while (true) {
       <summary>Python (requests) — non-stream</summary>
       <pre>import requests
 
-r = requests.post('https://your-domain/chat', json={
+r = requests.post('https://mn-chat-bot-api.vercel.app/chat', json={
     'model': 'openai/gpt-oss-120b',
     'messages': [
         {'role': 'system',  'content': 'You are a concise technical writer.'},
@@ -612,7 +612,7 @@ print(r.json()['response'])</pre>
       <summary>Python (httpx) — streaming</summary>
       <pre>import httpx, json
 
-with httpx.stream('POST', 'https://your-domain/chat', json={
+with httpx.stream('POST', 'https://mn-chat-bot-api.vercel.app/chat', json={
     'stream': True,
     'messages': [{'role': 'user', 'content': 'Count from 1 to 20 slowly.'}]
 }) as r:
@@ -629,7 +629,7 @@ with httpx.stream('POST', 'https://your-domain/chat', json={
 
     <details>
       <summary>PHP (curl) — non-stream</summary>
-      <pre>$ch = curl_init('https://your-domain/chat');
+      <pre>$ch = curl_init('https://mn-chat-bot-api.vercel.app/chat');
 curl_setopt_array($ch, [
     CURLOPT_POST           => true,
     CURLOPT_RETURNTRANSFER => true,
@@ -656,7 +656,7 @@ const body = JSON.stringify({
 });
 
 const req = https.request({
-  hostname: 'your-domain',
+  hostname: 'mn-chat-bot-api.vercel.app',
   path: '/chat',
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
