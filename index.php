@@ -382,7 +382,7 @@ function playgroundHtml(): string
 </head>
 <body>
 <main>
-  <h1>🤖 MN Bots PHP API</h1>
+  <h1>🤖 MN Bots Chat Ai API</h1>
   <p class="muted">AI chat API with streaming support, multi-model routing, and rate limiting.</p>
   <p class="muted">Available endpoints: <code>/chat</code> &nbsp;·&nbsp; <code>/models</code> &nbsp;·&nbsp; <code>/health</code></p>
 
