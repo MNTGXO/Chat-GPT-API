@@ -1,0 +1,17 @@
+name: mn-bots-php-api
+services:
+  - name: web
+    type: web
+    ports:
+      - port: 8000
+        protocol: http
+    env:
+      - key: DEFAULT_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_API_KEY
+        value: ""
+    build:
+      builder: docker
+      dockerfile: Dockerfile
+    run:
+      command: "php -S 0.0.0.0:8000 index.php"

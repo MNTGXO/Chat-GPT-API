@@ -1,0 +1,12 @@
+{
+  "name": "mn-bots/chatgpt-api-php",
+  "description": "PHP API for chat + image processing with Groq integration",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "ext-gd": "*"
+  },
+  "scripts": {
+    "serve": "php -S 0.0.0.0:${PORT:-8000} index.php"
+  }
+}

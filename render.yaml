@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: mn-bots-php-api
+    env: php
+    plan: free
+    buildCommand: "composer install --no-dev"
+    startCommand: "php -S 0.0.0.0:$PORT index.php"
+    envVars:
+      - key: DEFAULT_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_API_KEY
+        sync: false
