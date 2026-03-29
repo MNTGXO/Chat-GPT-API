@@ -507,7 +507,7 @@ data: [DONE]</pre>
 
     <details>
       <summary>cURL — custom model</summary>
-      <pre>curl -X POST https://your-domain/chat \
+      <pre>curl -X POST https://mn-chat-bot-api.vercel.app/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "openai/gpt-oss-120b",
