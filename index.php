@@ -14,7 +14,7 @@ set_error_handler(static function(int $errno, string $errstr, string $errfile, i
     return true; // suppress default PHP output
 });
 
-$groqApiKey   = getenv('GROQ_API_KEY') ?: '';
+$apiKey       = getenv('GROQ_API_KEY') ?: '';
 $defaultModel = getenv('DEFAULT_MODEL') ?: 'openai/gpt-oss-120b';
 
 $route  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -33,10 +33,9 @@ if ($route === '/') {
 
 if ($route === '/health') {
     jsonResponse([
-        'status'          => 'ok',
-        'runtime'         => 'php',
-        'timestamp'       => gmdate('c'),
-        'groq_configured' => $groqApiKey !== '',
+        'status'    => 'ok',
+        'runtime'   => 'php',
+        'timestamp' => gmdate('c'),
     ]);
     exit;
 }
@@ -55,11 +54,11 @@ if ($route === '/models') {
 }
 
 // ---------------------------------------------------------------------------
-// POST /chat — AI chat completions via Groq
+// POST /chat — AI chat completions
 // ---------------------------------------------------------------------------
 //
-// Proxies requests to the Groq API (OpenAI-compatible endpoint) and supports
-// both one-shot JSON responses and Server-Sent Events (SSE) streaming.
+// Proxies requests to the AI backend and supports both one-shot JSON
+// responses and Server-Sent Events (SSE) streaming.
 //
 // ┌─────────────────────────────────────────────────────────────────────────┐
 // │ Request body (application/json)                                         │
@@ -70,8 +69,6 @@ if ($route === '/models') {
 // │                  │            │        │ must have "role" (system /      │
 // │                  │            │        │ user / assistant) and "content".│
 // │ model            │ string     │ env    │ Model ID or alias (see /models).│
-// │ temperature      │ float      │ 0.7    │ Sampling temp: 0.0–2.0.        │
-// │ max_tokens       │ int        │ 2000   │ Max tokens in the completion.   │
 // │ stream           │ bool       │ false  │ true → SSE stream; false → JSON.│
 // └──────────────────┴────────────┴────────┴─────────────────────────────── ┘
 //
@@ -87,8 +84,8 @@ if ($route === '/chat' && $method === 'POST') {
         exit;
     }
 
-    if ($groqApiKey === '') {
-        jsonResponse(['error' => ['message' => '`GROQ_API_KEY` is not configured']], 500);
+    if ($apiKey === '') {
+        jsonResponse(['error' => ['message' => 'API key is not configured']], 500);
         exit;
     }
 
@@ -119,9 +116,9 @@ if ($route === '/chat' && $method === 'POST') {
     ];
 
     if ($stream) {
-        streamChat($requestBody, $groqApiKey);
+        streamChat($requestBody, $apiKey);
     } else {
-        $result = callGroq($requestBody, $groqApiKey);
+        $result = callAi($requestBody, $apiKey);
         if ($result['status'] >= 400) {
             jsonResponse($result['body'], $result['status']);
             exit;
@@ -152,7 +149,7 @@ function resolveModel(string $input, string $default): string
     return $aliases[$key] ?? $default;
 }
 
-function callGroq(array $payload, string $apiKey): array
+function callAi(array $payload, string $apiKey): array
 {
     $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
     curl_setopt_array($ch, [
@@ -172,13 +169,13 @@ function callGroq(array $payload, string $apiKey): array
     if ($raw === false) {
         $error = curl_error($ch);
         curl_close($ch);
-        return ['status' => 502, 'body' => ['error' => ['message' => 'Groq request failed: ' . $error]]];
+        return ['status' => 502, 'body' => ['error' => ['message' => 'Request failed: ' . $error]]];
     }
 
     curl_close($ch);
     $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
-        return ['status' => 502, 'body' => ['error' => ['message' => 'Invalid Groq response']]];
+        return ['status' => 502, 'body' => ['error' => ['message' => 'Invalid response from AI backend']]];
     }
 
     return ['status' => max(200, $status), 'body' => $decoded];
@@ -231,7 +228,7 @@ function streamChat(array $payload, string $apiKey): void
     curl_exec($ch);
 
     if (curl_errno($ch)) {
-        $msg = json_encode(['error' => ['message' => 'Groq stream failed: ' . curl_error($ch)]]);
+        $msg = json_encode(['error' => ['message' => 'Stream failed: ' . curl_error($ch)]]);
         echo "data: {$msg}\n\n";
         echo "data: [DONE]\n\n";
         @ob_flush();
@@ -386,7 +383,7 @@ function playgroundHtml(): string
 <body>
 <main>
   <h1>🤖 MN Bots PHP API</h1>
-  <p class="muted">Groq-powered AI chat API with streaming support, multi-model routing, and rate limiting.</p>
+  <p class="muted">AI chat API with streaming support, multi-model routing, and rate limiting.</p>
   <p class="muted">Available endpoints: <code>/chat</code> &nbsp;·&nbsp; <code>/models</code> &nbsp;·&nbsp; <code>/health</code></p>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -429,7 +426,7 @@ function playgroundHtml(): string
       <span class="badge">Rate limit: 20 req / 60 s</span>
       <span class="badge">JSON &amp; SSE streaming</span>
     </div>
-    <p>Sends a conversation to Groq (OpenAI-compatible) and returns an AI reply. Supports single-turn questions, multi-turn conversation history, custom system prompts, adjustable creativity, and real-time token streaming.</p>
+    <p>Sends a conversation to the AI backend and returns a reply. Supports single-turn questions, multi-turn conversation history, custom system prompts, and real-time token streaming.</p>
 
     <hr class="section-divider" />
     <h3>Request body — <code>Content-Type: application/json</code></h3>
@@ -452,22 +449,6 @@ function playgroundHtml(): string
           <td>env DEFAULT_MODEL</td>
           <td>Model ID or alias. See the <a href="/models">/models</a> endpoint for the full list.<br>
               Accepts: <code>openai/gpt-oss-120b</code>, <code>openai/gpt-oss-20b</code>, <code>llama-3.3-70b</code>, <code>gpt-4o-mini</code> (alias → default).</td>
-        </tr>
-        <tr>
-          <td><code>temperature</code> <span class="tag tag-opt">optional</span></td>
-          <td>float</td>
-          <td><code>0.7</code></td>
-          <td>Controls randomness / creativity.<br>
-              <code>0.0</code> = deterministic &amp; focused.<br>
-              <code>1.0</code> = balanced.<br>
-              <code>2.0</code> = highly random / creative.<br>
-              Recommended range: <code>0.0</code> – <code>1.5</code>.</td>
-        </tr>
-        <tr>
-          <td><code>max_tokens</code> <span class="tag tag-opt">optional</span></td>
-          <td>integer</td>
-          <td><code>2000</code></td>
-          <td>Maximum tokens the model may generate in its reply. Higher values allow longer answers but increase latency and cost. Range depends on model (typically up to 32 000).</td>
         </tr>
         <tr>
           <td><code>stream</code> <span class="tag tag-opt">optional</span></td>
@@ -525,13 +506,11 @@ data: [DONE]</pre>
     </details>
 
     <details>
-      <summary>cURL — custom model, temperature, max_tokens</summary>
+      <summary>cURL — custom model</summary>
       <pre>curl -X POST https://your-domain/chat \
   -H "Content-Type: application/json" \
   -d '{
     "model": "openai/gpt-oss-120b",
-    "temperature": 0.3,
-    "max_tokens": 512,
     "messages": [
       { "role": "user", "content": "Summarise the French Revolution in 3 bullet points." }
     ]
@@ -544,7 +523,6 @@ data: [DONE]</pre>
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama-3.3-70b",
-    "temperature": 0.8,
     "messages": [
       { "role": "system",    "content": "You are a pirate who only speaks in nautical metaphors." },
       { "role": "user",      "content": "How do I sort a list in Python?" },
@@ -574,8 +552,6 @@ data: [DONE]</pre>
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     model: 'openai/gpt-oss-120b',
-    temperature: 0.7,
-    max_tokens: 1000,
     messages: [
       { role: 'system', content: 'You are a helpful assistant.' },
       { role: 'user',   content: 'Explain async/await in JavaScript.' }
@@ -624,8 +600,6 @@ while (true) {
 
 r = requests.post('https://your-domain/chat', json={
     'model': 'openai/gpt-oss-120b',
-    'temperature': 0.5,
-    'max_tokens': 800,
     'messages': [
         {'role': 'system',  'content': 'You are a concise technical writer.'},
         {'role': 'user',    'content': 'What is a REST API?'}
@@ -661,10 +635,8 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
     CURLOPT_POSTFIELDS     => json_encode([
-        'model'       => 'openai/gpt-oss-120b',
-        'temperature' => 0.7,
-        'max_tokens'  => 500,
-        'messages'    => [
+        'model'    => 'openai/gpt-oss-120b',
+        'messages' => [
             ['role' => 'user', 'content' => 'What is PHP used for?']
         ],
     ]),
@@ -680,7 +652,6 @@ echo $data['response'];</pre>
 
 const body = JSON.stringify({
   model: 'llama-3.3-70b',
-  temperature: 0.6,
   messages: [{ role: 'user', content: 'What is Node.js?' }]
 });
 
@@ -705,8 +676,8 @@ req.end();</pre>
       <tbody>
         <tr><td>400</td><td>Missing or invalid <code>messages</code>, malformed JSON</td><td><code>{"error":{"message":"..."}}</code></td></tr>
         <tr><td>429</td><td>Rate limit exceeded (20 req / 60 s per IP)</td><td><code>{"error":{"message":"Rate limit exceeded"}}</code></td></tr>
-        <tr><td>500</td><td><code>GROQ_API_KEY</code> not configured on server</td><td><code>{"error":{"message":"..."}}</code></td></tr>
-        <tr><td>502</td><td>Groq API unreachable or returned invalid data</td><td><code>{"error":{"message":"..."}}</code></td></tr>
+        <tr><td>500</td><td>API key not configured on server</td><td><code>{"error":{"message":"..."}}</code></td></tr>
+        <tr><td>502</td><td>AI backend unreachable or returned invalid data</td><td><code>{"error":{"message":"..."}}</code></td></tr>
       </tbody>
     </table>
   </section>
@@ -738,8 +709,7 @@ req.end();</pre>
 → {
   "status": "ok",
   "runtime": "php",
-  "timestamp": "2025-01-01T00:00:00+00:00",
-  "groq_configured": true
+  "timestamp": "2025-01-01T00:00:00+00:00"
 }</pre>
   </section>
 
