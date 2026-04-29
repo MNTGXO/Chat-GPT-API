@@ -72,17 +72,12 @@ if ($route === '/models') {
 // │ stream           │ bool       │ false  │ true → SSE stream; false → JSON.│
 // └──────────────────┴────────────┴────────┴─────────────────────────────── ┘
 //
-// Rate limit: 20 requests / 60 s per IP.
-//
 // Non-stream response: { "response": "<assistant text>" }
 // Stream response:     OpenAI SSE format (text/event-stream), ending [DONE].
 // ---------------------------------------------------------------------------
 
 if ($route === '/chat' && $method === 'POST') {
-    if (!checkRateLimit('chat:' . getClientIdentifier(), 20, 60)) {
-        jsonResponse(['error' => ['message' => 'Rate limit exceeded']], 429);
-        exit;
-    }
+    // Rate limit check removed – no throttling applied.
 
     if ($apiKey === '') {
         jsonResponse(['error' => ['message' => 'API key is not configured']], 500);
@@ -288,6 +283,8 @@ function getClientIdentifier(): string
 // ---------------------------------------------------------------------------
 // Rate limiting & cache
 // ---------------------------------------------------------------------------
+// The checkRateLimit function is retained but no longer called; you may
+// remove it entirely if you want a smaller codebase.
 
 function checkRateLimit(string $key, int $limit, int $windowSeconds): bool
 {
